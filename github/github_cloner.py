@@ -193,7 +193,7 @@ class GitHubCloner:
                 )
                 return False
 
-            # Tag the repository
+            # Tag the repository with visibility
             tag_result = subprocess.run(
                 ["gitopolis", "tag", tag, repo_name],
                 cwd=self.clone_dir,
@@ -208,8 +208,23 @@ class GitHubCloner:
                 )
                 return False
 
+            # Tag the repository with source platform
+            github_tag_result = subprocess.run(
+                ["gitopolis", "tag", "github", repo_name],
+                cwd=self.clone_dir,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if github_tag_result.returncode != 0:
+                self.logger.warning(
+                    f"Failed to tag {repo_name} with 'github': {github_tag_result.stderr}"
+                )
+                return False
+
             self.logger.info(
-                f"Successfully added {repo_name} to gitopolis with tag '{tag}'"
+                f"Successfully added {repo_name} to gitopolis with tags '{tag}' and 'github'"
             )
             return True
 

@@ -192,7 +192,7 @@ class AzureDevOpsCloner:
                 )
                 return False
 
-            # Tag the repository
+            # Tag the repository with visibility
             tag_result = subprocess.run(
                 ["gitopolis", "tag", tag, repo_name],
                 cwd=self.clone_dir,
@@ -207,8 +207,23 @@ class AzureDevOpsCloner:
                 )
                 return False
 
+            # Tag the repository with source platform
+            azdo_tag_result = subprocess.run(
+                ["gitopolis", "tag", "azuredevops", repo_name],
+                cwd=self.clone_dir,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if azdo_tag_result.returncode != 0:
+                self.logger.warning(
+                    f"Failed to tag {repo_name} with 'azuredevops': {azdo_tag_result.stderr}"
+                )
+                return False
+
             self.logger.info(
-                f"Successfully added {repo_name} to gitopolis with tag '{tag}'"
+                f"Successfully added {repo_name} to gitopolis with tags '{tag}' and 'azuredevops'"
             )
             return True
 

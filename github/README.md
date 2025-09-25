@@ -76,8 +76,8 @@ python github_cloner.py --clone-dir ~/my-repos --owner mycompany
 2. **Repository Discovery**: Uses `gh repo list` to find all public and private repositories
 3. **Cloning**: Clones each repository using `gh repo clone` for secure authentication
 4. **Gitopolis Integration**: Adds each repository to gitopolis with appropriate tags:
-   - Public repositories get tagged as "public"
-   - Private repositories get tagged as "private"
+   - Public repositories get tagged as "public" and "github"
+   - Private repositories get tagged as "private" and "github"
 
 ## Logging
 
@@ -90,7 +90,9 @@ The script creates detailed logs in two places:
 The script integrates with gitopolis by:
 
 1. **Adding repositories**: Uses `gitopolis add <repo-name>` to add each cloned repository
-2. **Tagging repositories**: Uses `gitopolis tag <tag> <repo-name>` to tag repositories as "public" or "private"
+2. **Tagging repositories**: Uses `gitopolis tag <tag> <repo-name>` to tag repositories with:
+   - Visibility tags: "public" or "private"
+   - Source tag: "github"
 3. **State management**: Creates/updates `.gitopolis.toml` file in the clone directory
 
 ## Error Handling

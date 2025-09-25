@@ -78,7 +78,7 @@ python azure_devops_cloner.py --organization mycompany --project web-apps --clon
 2. **Repository Discovery**: Uses `az repos list` to find all repositories in the organization/project
 3. **Cloning**: Clones each repository using `git clone` with the repository's remote URL
 4. **Gitopolis Integration**: Adds each repository to gitopolis with appropriate tags:
-   - Repositories are typically tagged as "private" (Azure DevOps default)
+   - Repositories are typically tagged as "private" and "azuredevops" (Azure DevOps default)
 
 ## Logging
 
@@ -91,7 +91,9 @@ The script creates detailed logs in two places:
 The script integrates with gitopolis by:
 
 1. **Adding repositories**: Uses `gitopolis add <repo-name>` to add each cloned repository
-2. **Tagging repositories**: Uses `gitopolis tag <tag> <repo-name>` to tag repositories as "private"
+2. **Tagging repositories**: Uses `gitopolis tag <tag> <repo-name>` to tag repositories with:
+   - Visibility tags: "private" (or "public" if available)
+   - Source tag: "azuredevops"
 3. **State management**: Creates/updates `.gitopolis.toml` file in the clone directory
 
 ## Error Handling
