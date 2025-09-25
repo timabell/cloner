@@ -14,6 +14,10 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+# Import shared gitopolis utilities
+sys.path.append(str(Path(__file__).parent.parent))
+from gitopolis_utils import add_repository_to_gitopolis
+
 
 class GitHubCloner:
     """Main class for cloning GitHub repositories and integrating with gitopolis CLI."""
@@ -172,65 +176,23 @@ class GitHubCloner:
         Returns:
             True if successful, False otherwise
         """
-        try:
-            repo_name = repo["name"]
-            tag = "private" if repo["isPrivate"] else "public"
+        repo_name = repo["name"]
 
-            self.logger.info(f"Adding {repo_name} to gitopolis with tag '{tag}'...")
-
-            # Add repository to gitopolis
-            add_result = subprocess.run(
-                ["gitopolis", "add", repo_name],
-                cwd=self.clone_dir,
-                capture_output=True,
-                text=True,
-                check=False,
+        # GitHub visibility: public, private, or internal
+        if repo["isPrivate"]:
+            visibility_tag = (
+                "internal" if repo.get("visibility") == "internal" else "private"
             )
+        else:
+            visibility_tag = "public"
 
-            if add_result.returncode != 0:
-                self.logger.warning(
-                    f"Failed to add {repo_name} to gitopolis: {add_result.stderr}"
-                )
-                return False
-
-            # Tag the repository with visibility
-            tag_result = subprocess.run(
-                ["gitopolis", "tag", tag, repo_name],
-                cwd=self.clone_dir,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if tag_result.returncode != 0:
-                self.logger.warning(
-                    f"Failed to tag {repo_name} with '{tag}': {tag_result.stderr}"
-                )
-                return False
-
-            # Tag the repository with source platform
-            github_tag_result = subprocess.run(
-                ["gitopolis", "tag", "github", repo_name],
-                cwd=self.clone_dir,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if github_tag_result.returncode != 0:
-                self.logger.warning(
-                    f"Failed to tag {repo_name} with 'github': {github_tag_result.stderr}"
-                )
-                return False
-
-            self.logger.info(
-                f"Successfully added {repo_name} to gitopolis with tags '{tag}' and 'github'"
-            )
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error adding {repo_name} to gitopolis: {e}")
-            return False
+        return add_repository_to_gitopolis(
+            repo_name=repo_name,
+            clone_dir=self.clone_dir,
+            visibility_tag=visibility_tag,
+            source_tag="github",
+            logger=self.logger,
+        )
 
     def process_repositories(self, owner: Optional[str] = None):
         """Main method to process all repositories."""

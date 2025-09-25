@@ -14,6 +14,10 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+# Import shared gitopolis utilities
+sys.path.append(str(Path(__file__).parent.parent))
+from gitopolis_utils import add_repository_to_gitopolis
+
 
 class AzureDevOpsCloner:
     """Main class for cloning Azure DevOps repositories and integrating with gitopolis CLI."""
@@ -165,71 +169,18 @@ class AzureDevOpsCloner:
         Returns:
             True if successful, False otherwise
         """
-        try:
-            repo_name = repo["name"]
-            # Azure DevOps repos are typically private by default, but we can check visibility
-            # For now, we'll tag based on project visibility or assume private
-            tag = "private"  # Most Azure DevOps repos are private
+        repo_name = repo["name"]
 
-            # If there's visibility info in the repo data, use it
-            if "visibility" in repo:
-                tag = "public" if repo["visibility"].lower() == "public" else "private"
+        # Azure DevOps repos are always private
+        visibility_tag = "private"
 
-            self.logger.info(f"Adding {repo_name} to gitopolis with tag '{tag}'...")
-
-            # Add repository to gitopolis
-            add_result = subprocess.run(
-                ["gitopolis", "add", repo_name],
-                cwd=self.clone_dir,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if add_result.returncode != 0:
-                self.logger.warning(
-                    f"Failed to add {repo_name} to gitopolis: {add_result.stderr}"
-                )
-                return False
-
-            # Tag the repository with visibility
-            tag_result = subprocess.run(
-                ["gitopolis", "tag", tag, repo_name],
-                cwd=self.clone_dir,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if tag_result.returncode != 0:
-                self.logger.warning(
-                    f"Failed to tag {repo_name} with '{tag}': {tag_result.stderr}"
-                )
-                return False
-
-            # Tag the repository with source platform
-            azdo_tag_result = subprocess.run(
-                ["gitopolis", "tag", "azuredevops", repo_name],
-                cwd=self.clone_dir,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if azdo_tag_result.returncode != 0:
-                self.logger.warning(
-                    f"Failed to tag {repo_name} with 'azuredevops': {azdo_tag_result.stderr}"
-                )
-                return False
-
-            self.logger.info(
-                f"Successfully added {repo_name} to gitopolis with tags '{tag}' and 'azuredevops'"
-            )
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error adding {repo_name} to gitopolis: {e}")
-            return False
+        return add_repository_to_gitopolis(
+            repo_name=repo_name,
+            clone_dir=self.clone_dir,
+            visibility_tag=visibility_tag,
+            source_tag="azuredevops",
+            logger=self.logger,
+        )
 
     def process_repositories(self, organization: str, project: Optional[str] = None):
         """Main method to process all repositories."""
