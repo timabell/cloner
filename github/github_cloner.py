@@ -22,14 +22,23 @@ from gitopolis_utils import add_repository_to_gitopolis_config
 class GitHubCloner:
     """Main class for discovering GitHub repositories and adding them to gitopolis configuration."""
 
-    def __init__(self, config_path: str):
+    def __init__(self, target: str):
         """
         Initialize the GitHub Cloner.
 
         Args:
-            config_path: Path to .gitopolis.toml file
+            target: Path to .gitopolis.toml file or directory containing it
         """
-        self.config_path = Path(config_path)
+        target_path = Path(target)
+
+        # If target is a directory, append .gitopolis.toml
+        if target_path.is_dir() or (
+            not target_path.exists() and not target_path.suffix
+        ):
+            self.config_path = target_path / ".gitopolis.toml"
+        else:
+            self.config_path = target_path
+
         self.setup_logging()
 
         # Create parent directory if it doesn't exist
@@ -203,7 +212,7 @@ def main():
         "--target",
         "-t",
         required=True,
-        help="Path to .gitopolis.toml file (required)",
+        help="Path to .gitopolis.toml file or directory containing it (required)",
     )
     parser.add_argument(
         "--owner",
@@ -212,7 +221,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        cloner = GitHubCloner(config_path=args.target)
+        cloner = GitHubCloner(target=args.target)
         cloner.process_repositories(args.owner)
 
     except KeyboardInterrupt:

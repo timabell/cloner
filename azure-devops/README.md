@@ -38,6 +38,8 @@ See the [main README](../README.md) for installation instructions.
 To discover all repositories from an organization and add them to gitopolis configuration:
 
 ```bash
+python azure_devops_cloner.py --organization myorg --target ~/my-repos/
+# or
 python azure_devops_cloner.py --organization myorg --target ~/my-repos/.gitopolis.toml
 ```
 
@@ -46,6 +48,8 @@ python azure_devops_cloner.py --organization myorg --target ~/my-repos/.gitopoli
 To discover repositories from a specific project:
 
 ```bash
+python azure_devops_cloner.py --organization myorg --project myproject --target ~/my-repos/
+# or
 python azure_devops_cloner.py --organization myorg --project myproject --target ~/my-repos/.gitopolis.toml
 ```
 
@@ -54,7 +58,7 @@ python azure_devops_cloner.py --organization myorg --project myproject --target 
 | Option | Description | Required |
 |--------|-------------|----------|
 | `--organization` | Azure DevOps organization name | Yes |
-| `--target`, `-t` | Path to .gitopolis.toml file | Yes |
+| `--target`, `-t` | Path to .gitopolis.toml file or directory containing it | Yes |
 | `--project` | Azure DevOps project name | No (defaults to all projects) |
 | `--help` | Show help message | - |
 

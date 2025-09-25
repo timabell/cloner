@@ -37,6 +37,8 @@ See the [main README](../README.md) for installation instructions.
 To discover all repositories from your authenticated user and add them to gitopolis configuration:
 
 ```bash
+./github_cloner.py --target ~/my-repos/
+# or
 ./github_cloner.py --target ~/my-repos/.gitopolis.toml
 ```
 
@@ -45,6 +47,8 @@ To discover all repositories from your authenticated user and add them to gitopo
 To discover repositories from a specific user or organization:
 
 ```bash
+./github_cloner.py --target ~/my-repos/ --owner mycompany
+# or
 ./github_cloner.py --target ~/my-repos/.gitopolis.toml --owner mycompany
 ```
 
@@ -52,7 +56,7 @@ To discover repositories from a specific user or organization:
 
 | Option | Description | Required |
 |--------|-------------|----------|
-| `--target`, `-t` | Path to .gitopolis.toml file | Yes |
+| `--target`, `-t` | Path to .gitopolis.toml file or directory containing it | Yes |
 | `--owner` | GitHub owner (user or organization) name | No (defaults to authenticated user) |
 
 ## Troubleshooting
