@@ -143,11 +143,12 @@ class GitHubCloner:
         repo_name = repo["name"]
         repo_url = repo["sshUrl"]
 
-        # GitHub visibility: public, private, or internal
-        if repo["isPrivate"]:
-            visibility_tag = (
-                "internal" if repo.get("visibility") == "internal" else "private"
-            )
+        # GitHub visibility: use the visibility field directly
+        visibility = repo.get("visibility", "").upper()
+        if visibility == "INTERNAL":
+            visibility_tag = "internal"
+        elif visibility == "PRIVATE" or repo.get("isPrivate", False):
+            visibility_tag = "private"
         else:
             visibility_tag = "public"
 
