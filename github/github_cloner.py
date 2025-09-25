@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+
 class GitHubCloner:
     """Main class for cloning GitHub repositories and integrating with gitopolis CLI."""
 
@@ -187,7 +188,9 @@ class GitHubCloner:
             )
 
             if add_result.returncode != 0:
-                self.logger.warning(f"Failed to add {repo_name} to gitopolis: {add_result.stderr}")
+                self.logger.warning(
+                    f"Failed to add {repo_name} to gitopolis: {add_result.stderr}"
+                )
                 return False
 
             # Tag the repository
@@ -200,10 +203,14 @@ class GitHubCloner:
             )
 
             if tag_result.returncode != 0:
-                self.logger.warning(f"Failed to tag {repo_name} with '{tag}': {tag_result.stderr}")
+                self.logger.warning(
+                    f"Failed to tag {repo_name} with '{tag}': {tag_result.stderr}"
+                )
                 return False
 
-            self.logger.info(f"Successfully added {repo_name} to gitopolis with tag '{tag}'")
+            self.logger.info(
+                f"Successfully added {repo_name} to gitopolis with tag '{tag}'"
+            )
             return True
 
         except Exception as e:
@@ -257,8 +264,8 @@ def main():
     )
     parser.add_argument(
         "--clone-dir",
-        default="./repos",
-        help="Directory to clone repositories into (default: ./repos)",
+        required=True,
+        help="Directory to clone repositories into (required)",
     )
     args = parser.parse_args()
 

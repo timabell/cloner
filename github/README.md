@@ -45,13 +45,7 @@ See the [main README](../README.md) for installation instructions.
 To clone all repositories and add them to gitopolis:
 
 ```bash
-python github_cloner.py
-```
-
-### With Custom Clone Directory
-
-```bash
-python github_cloner.py --clone-dir /path/to/your/repos
+python github_cloner.py --clone-dir ./repos
 ```
 
 ### Full Example
@@ -62,9 +56,9 @@ python github_cloner.py --clone-dir ~/my-repos
 
 ## Command Line Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--clone-dir` | Directory where repositories will be cloned | `./repos` |
+| Option | Description | Required |
+|--------|-------------|----------|
+| `--clone-dir` | Directory where repositories will be cloned | Yes |
 | `--help` | Show help message | - |
 
 ## How It Works
