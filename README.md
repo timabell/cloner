@@ -5,7 +5,7 @@ This project provides scripts to clone repositories from various source control 
 ## Supported Systems
 
 - **GitHub** (`github/`) - Clone public and private GitHub repositories
-- **Azure DevOps** (`azure-devops/`) - Coming soon
+- **Azure DevOps** (`azure-devops/`) - Clone repositories from Azure DevOps organizations/projects
 
 ## Prerequisites
 
@@ -34,4 +34,4 @@ To format code and run linting across all variants:
 See the README in each subdirectory for specific usage instructions:
 
 - [GitHub Cloner](github/README.md)
-- Azure DevOps Cloner (coming soon)
+- [Azure DevOps Cloner](azure-devops/README.md)
