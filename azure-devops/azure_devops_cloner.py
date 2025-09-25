@@ -16,24 +16,24 @@ from typing import Dict, List, Optional
 
 # Import shared gitopolis utilities
 sys.path.append(str(Path(__file__).parent.parent))
-from gitopolis_utils import add_repository_to_gitopolis
+from gitopolis_utils import add_repository_to_gitopolis_config
 
 
 class AzureDevOpsCloner:
-    """Main class for cloning Azure DevOps repositories and integrating with gitopolis CLI."""
+    """Main class for discovering Azure DevOps repositories and adding them to gitopolis configuration."""
 
-    def __init__(self, clone_dir: str = "./repos"):
+    def __init__(self, config_path: str):
         """
         Initialize the Azure DevOps Cloner.
 
         Args:
-            clone_dir: Directory where repositories will be cloned
+            config_path: Path to .gitopolis.toml file
         """
-        self.clone_dir = Path(clone_dir)
+        self.config_path = Path(config_path)
         self.setup_logging()
 
-        # Create clone directory if it doesn't exist
-        self.clone_dir.mkdir(parents=True, exist_ok=True)
+        # Create parent directory if it doesn't exist
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
 
     def setup_logging(self):
         """Set up logging configuration."""
@@ -118,65 +118,26 @@ class AzureDevOpsCloner:
             self.logger.error(f"Failed to fetch repositories: {e}")
             return []
 
-    def clone_repository(self, repo: Dict) -> Optional[Path]:
+    def add_to_gitopolis(self, repo: Dict) -> bool:
         """
-        Clone a single repository.
+        Add repository to gitopolis configuration and tag it appropriately.
 
         Args:
             repo: Repository dictionary from Azure DevOps API
-
-        Returns:
-            Path to cloned repository or None if failed
-        """
-        repo_name = repo["name"]
-        repo_path = self.clone_dir / repo_name
-
-        # Skip if already exists
-        if repo_path.exists():
-            self.logger.info(f"Repository {repo_name} already exists, skipping clone")
-            return repo_path
-
-        try:
-            self.logger.info(f"Cloning {repo_name}...")
-
-            # Use git clone with the remote URL
-            clone_url = repo.get("remoteUrl") or repo.get("webUrl")
-            if not clone_url:
-                self.logger.error(f"No clone URL found for {repo_name}")
-                return None
-
-            subprocess.run(
-                ["git", "clone", clone_url, str(repo_path)],
-                check=True,
-                cwd=self.clone_dir,
-            )
-
-            self.logger.info(f"Successfully cloned {repo_name}")
-            return repo_path
-
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Failed to clone {repo_name}: {e}")
-            return None
-
-    def add_to_gitopolis(self, repo: Dict, repo_path: Path) -> bool:
-        """
-        Add repository to gitopolis CLI and tag it appropriately.
-
-        Args:
-            repo: Repository dictionary from Azure DevOps API
-            repo_path: Local path to cloned repository
 
         Returns:
             True if successful, False otherwise
         """
         repo_name = repo["name"]
+        repo_url = repo.get("remoteUrl") or repo.get("webUrl")
 
         # Azure DevOps repos are always private
         visibility_tag = "private"
 
-        return add_repository_to_gitopolis(
+        return add_repository_to_gitopolis_config(
             repo_name=repo_name,
-            clone_dir=self.clone_dir,
+            repo_url=repo_url,
+            config_path=self.config_path,
             visibility_tag=visibility_tag,
             source_tag="azuredevops",
             logger=self.logger,
@@ -185,7 +146,7 @@ class AzureDevOpsCloner:
     def process_repositories(self, organization: str, project: Optional[str] = None):
         """Main method to process all repositories."""
         self.logger.info(
-            "Starting Azure DevOps repository cloning and gitopolis integration..."
+            "Starting Azure DevOps repository discovery and gitopolis integration..."
         )
 
         # Get all repositories
@@ -195,28 +156,21 @@ class AzureDevOpsCloner:
             self.logger.warning("No repositories found")
             return
 
-        success_count = 0
         gitopolis_count = 0
 
         for repo in repositories:
             self.logger.info(f"Processing {repo['name']}...")
 
-            # Clone repository
-            repo_path = self.clone_repository(repo)
-
-            if repo_path:
-                success_count += 1
-
-                # Add to gitopolis
-                if self.add_to_gitopolis(repo, repo_path):
-                    gitopolis_count += 1
+            # Add to gitopolis config (will raise on error)
+            self.add_to_gitopolis(repo)
+            gitopolis_count += 1
 
         self.logger.info(f"Processing complete!")
         self.logger.info(
-            f"Successfully cloned: {success_count}/{len(repositories)} repositories"
+            f"Successfully added to gitopolis: {gitopolis_count}/{len(repositories)} repositories"
         )
         self.logger.info(
-            f"Successfully added to gitopolis: {gitopolis_count}/{len(repositories)} repositories"
+            f"Use 'gitopolis clone' to clone all repositories, or 'gitopolis clone --tag <tag>' for specific subsets."
         )
 
 
@@ -225,12 +179,13 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Clone Azure DevOps repositories and add to gitopolis"
+        description="Discover Azure DevOps repositories and add to gitopolis configuration"
     )
     parser.add_argument(
-        "--clone-dir",
+        "--target",
+        "-t",
         required=True,
-        help="Directory to clone repositories into (required)",
+        help="Path to .gitopolis.toml file (required)",
     )
     parser.add_argument(
         "--organization",
@@ -239,13 +194,13 @@ def main():
     )
     parser.add_argument(
         "--project",
-        help="Azure DevOps project name (optional, if not specified will clone from all projects)",
+        help="Azure DevOps project name (optional, if not specified will discover from all projects)",
     )
 
     args = parser.parse_args()
 
     try:
-        cloner = AzureDevOpsCloner(clone_dir=args.clone_dir)
+        cloner = AzureDevOpsCloner(config_path=args.target)
         cloner.process_repositories(args.organization, args.project)
 
     except KeyboardInterrupt:

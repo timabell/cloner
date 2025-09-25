@@ -16,24 +16,24 @@ from typing import Dict, List, Optional
 
 # Import shared gitopolis utilities
 sys.path.append(str(Path(__file__).parent.parent))
-from gitopolis_utils import add_repository_to_gitopolis
+from gitopolis_utils import add_repository_to_gitopolis_config
 
 
 class GitHubCloner:
-    """Main class for cloning GitHub repositories and integrating with gitopolis CLI."""
+    """Main class for discovering GitHub repositories and adding them to gitopolis configuration."""
 
-    def __init__(self, clone_dir: str = "./repos"):
+    def __init__(self, config_path: str):
         """
         Initialize the GitHub Cloner.
 
         Args:
-            clone_dir: Directory where repositories will be cloned
+            config_path: Path to .gitopolis.toml file
         """
-        self.clone_dir = Path(clone_dir)
+        self.config_path = Path(config_path)
         self.setup_logging()
 
-        # Create clone directory if it doesn't exist
-        self.clone_dir.mkdir(parents=True, exist_ok=True)
+        # Create parent directory if it doesn't exist
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
 
     def setup_logging(self):
         """Set up logging configuration."""
@@ -130,53 +130,18 @@ class GitHubCloner:
         self.logger.info(f"Total repositories found: {len(all_repos)}")
         return all_repos
 
-    def clone_repository(self, repo: Dict) -> Optional[Path]:
+    def add_to_gitopolis(self, repo: Dict) -> bool:
         """
-        Clone a single repository.
+        Add repository to gitopolis configuration and tag it appropriately.
 
         Args:
             repo: Repository dictionary from GitHub API
-
-        Returns:
-            Path to cloned repository or None if failed
-        """
-        repo_name = repo["name"]
-        repo_path = self.clone_dir / repo_name
-
-        # Skip if already exists
-        if repo_path.exists():
-            self.logger.info(f"Repository {repo_name} already exists, skipping clone")
-            return repo_path
-
-        try:
-            self.logger.info(f"Cloning {repo['nameWithOwner']}...")
-
-            # Use gh repo clone for better authentication handling
-            subprocess.run(
-                ["gh", "repo", "clone", repo["nameWithOwner"], str(repo_path)],
-                check=True,
-                cwd=self.clone_dir,
-            )
-
-            self.logger.info(f"Successfully cloned {repo_name}")
-            return repo_path
-
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Failed to clone {repo_name}: {e}")
-            return None
-
-    def add_to_gitopolis(self, repo: Dict, repo_path: Path) -> bool:
-        """
-        Add repository to gitopolis CLI and tag it appropriately.
-
-        Args:
-            repo: Repository dictionary from GitHub API
-            repo_path: Local path to cloned repository
 
         Returns:
             True if successful, False otherwise
         """
         repo_name = repo["name"]
+        repo_url = repo["sshUrl"]
 
         # GitHub visibility: public, private, or internal
         if repo["isPrivate"]:
@@ -186,9 +151,10 @@ class GitHubCloner:
         else:
             visibility_tag = "public"
 
-        return add_repository_to_gitopolis(
+        return add_repository_to_gitopolis_config(
             repo_name=repo_name,
-            clone_dir=self.clone_dir,
+            repo_url=repo_url,
+            config_path=self.config_path,
             visibility_tag=visibility_tag,
             source_tag="github",
             logger=self.logger,
@@ -197,7 +163,7 @@ class GitHubCloner:
     def process_repositories(self, owner: Optional[str] = None):
         """Main method to process all repositories."""
         self.logger.info(
-            "Starting GitHub repository cloning and gitopolis integration..."
+            "Starting GitHub repository discovery and gitopolis integration..."
         )
 
         # Get all repositories
@@ -207,28 +173,21 @@ class GitHubCloner:
             self.logger.warning("No repositories found")
             return
 
-        success_count = 0
         gitopolis_count = 0
 
         for repo in repositories:
             self.logger.info(f"Processing {repo['nameWithOwner']}...")
 
-            # Clone repository
-            repo_path = self.clone_repository(repo)
-
-            if repo_path:
-                success_count += 1
-
-                # Add to Gitopolis
-                if self.add_to_gitopolis(repo, repo_path):
-                    gitopolis_count += 1
+            # Add to gitopolis config (will raise on error)
+            self.add_to_gitopolis(repo)
+            gitopolis_count += 1
 
         self.logger.info(f"Processing complete!")
         self.logger.info(
-            f"Successfully cloned: {success_count}/{len(repositories)} repositories"
+            f"Successfully added to gitopolis: {gitopolis_count}/{len(repositories)} repositories"
         )
         self.logger.info(
-            f"Successfully added to gitopolis: {gitopolis_count}/{len(repositories)} repositories"
+            f"Use 'gitopolis clone' to clone all repositories, or 'gitopolis clone --tag <tag>' for specific subsets."
         )
 
 
@@ -237,21 +196,22 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Clone GitHub repositories and add to gitopolis"
+        description="Discover GitHub repositories and add to gitopolis configuration"
     )
     parser.add_argument(
-        "--clone-dir",
+        "--target",
+        "-t",
         required=True,
-        help="Directory to clone repositories into (required)",
+        help="Path to .gitopolis.toml file (required)",
     )
     parser.add_argument(
         "--owner",
-        help="GitHub owner (user or organization) name (optional, if not specified will clone from authenticated user)",
+        help="GitHub owner (user or organization) name (optional, if not specified will discover from authenticated user)",
     )
     args = parser.parse_args()
 
     try:
-        cloner = GitHubCloner(clone_dir=args.clone_dir)
+        cloner = GitHubCloner(config_path=args.target)
         cloner.process_repositories(args.owner)
 
     except KeyboardInterrupt:
