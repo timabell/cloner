@@ -42,16 +42,24 @@ See the [main README](../README.md) for installation instructions.
 
 ### Basic Usage
 
-To clone all repositories and add them to gitopolis:
+To clone all repositories from your authenticated user and add them to gitopolis:
 
 ```bash
 python github_cloner.py --clone-dir ./repos
 ```
 
+### With Owner (User or Organization)
+
+To clone repositories from a specific user or organization:
+
+```bash
+python github_cloner.py --clone-dir ./repos --owner myorganization
+```
+
 ### Full Example
 
 ```bash
-python github_cloner.py --clone-dir ~/my-repos
+python github_cloner.py --clone-dir ~/my-repos --owner mycompany
 ```
 
 ## Command Line Options
@@ -59,6 +67,7 @@ python github_cloner.py --clone-dir ~/my-repos
 | Option | Description | Required |
 |--------|-------------|----------|
 | `--clone-dir` | Directory where repositories will be cloned | Yes |
+| `--owner` | GitHub owner (user or organization) name | No (defaults to authenticated user) |
 | `--help` | Show help message | - |
 
 ## How It Works

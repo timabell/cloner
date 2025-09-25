@@ -72,31 +72,41 @@ class GitHubCloner:
             self.logger.error(f"stdout: {result.stdout}")
             raise
 
-    def get_repositories(self) -> List[Dict]:
+    def get_repositories(self, owner: Optional[str] = None) -> List[Dict]:
         """
-        Get all repositories (public and private) for the authenticated user.
+        Get all repositories (public and private) for the authenticated user or specified owner.
+
+        Args:
+            owner: Optional owner (user or organization) name to limit repositories to
 
         Returns:
             List of repository dictionaries
         """
-        self.logger.info("Fetching all repositories...")
+        if owner:
+            self.logger.info(f"Fetching repositories from owner '{owner}'...")
+        else:
+            self.logger.info("Fetching all repositories for authenticated user...")
 
         all_repos = []
 
+        # Build base command args
+        base_args = [
+            "repo",
+            "list",
+            "--json",
+            "name,nameWithOwner,isPrivate,sshUrl,description,primaryLanguage,visibility",
+            "--limit",
+            "1000",
+        ]
+
+        # Add owner if specified
+        if owner:
+            base_args.append(owner)
+
         # Get public repositories
         try:
-            public_repos = self.run_gh_command(
-                [
-                    "repo",
-                    "list",
-                    "--json",
-                    "name,nameWithOwner,isPrivate,sshUrl,description,primaryLanguage,visibility",
-                    "--limit",
-                    "1000",
-                    "--visibility",
-                    "public",
-                ]
-            )
+            public_args = base_args + ["--visibility", "public"]
+            public_repos = self.run_gh_command(public_args)
             if isinstance(public_repos, list):
                 all_repos.extend(public_repos)
                 self.logger.info(f"Found {len(public_repos)} public repositories")
@@ -105,18 +115,8 @@ class GitHubCloner:
 
         # Get private repositories
         try:
-            private_repos = self.run_gh_command(
-                [
-                    "repo",
-                    "list",
-                    "--json",
-                    "name,nameWithOwner,isPrivate,sshUrl,description,primaryLanguage,visibility",
-                    "--limit",
-                    "1000",
-                    "--visibility",
-                    "private",
-                ]
-            )
+            private_args = base_args + ["--visibility", "private"]
+            private_repos = self.run_gh_command(private_args)
             if isinstance(private_repos, list):
                 all_repos.extend(private_repos)
                 self.logger.info(f"Found {len(private_repos)} private repositories")
@@ -217,14 +217,14 @@ class GitHubCloner:
             self.logger.error(f"Error adding {repo_name} to gitopolis: {e}")
             return False
 
-    def process_repositories(self):
+    def process_repositories(self, owner: Optional[str] = None):
         """Main method to process all repositories."""
         self.logger.info(
-            "Starting GitHub repository cloning and Gitopolis integration..."
+            "Starting GitHub repository cloning and gitopolis integration..."
         )
 
         # Get all repositories
-        repositories = self.get_repositories()
+        repositories = self.get_repositories(owner)
 
         if not repositories:
             self.logger.warning("No repositories found")
@@ -267,11 +267,15 @@ def main():
         required=True,
         help="Directory to clone repositories into (required)",
     )
+    parser.add_argument(
+        "--owner",
+        help="GitHub owner (user or organization) name (optional, if not specified will clone from authenticated user)",
+    )
     args = parser.parse_args()
 
     try:
         cloner = GitHubCloner(clone_dir=args.clone_dir)
-        cloner.process_repositories()
+        cloner.process_repositories(args.owner)
 
     except KeyboardInterrupt:
         print("\nOperation cancelled by user")
