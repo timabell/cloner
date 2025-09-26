@@ -8,7 +8,7 @@ and adding repositories with appropriate tags.
 import logging
 import toml
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, List
 
 
 def load_gitopolis_config(config_path: Path) -> Dict:
@@ -53,6 +53,80 @@ def save_gitopolis_config(config_path: Path, config: Dict) -> bool:
         return False
 
 
+def add_repositories_to_gitopolis_config(
+    repositories: List[Dict],
+    config_path: Path,
+    logger: logging.Logger,
+) -> bool:
+    """
+    Add multiple repositories to gitopolis configuration in one operation.
+
+    Args:
+        repositories: List of repository dicts with keys: name, url, visibility_tag, source_tag
+        config_path: Path to .gitopolis.toml file
+        logger: Logger instance for output
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        logger.info(f"Adding {len(repositories)} repositories to gitopolis config...")
+
+        # Load existing config
+        config = load_gitopolis_config(config_path)
+
+        # Process all repositories
+        for repo_info in repositories:
+            repo_name = repo_info["name"]
+            repo_url = repo_info["url"]
+            visibility_tag = repo_info["visibility_tag"]
+            source_tag = repo_info["source_tag"]
+
+            # Add repository if not exists (repos is a list of dicts)
+            repo_exists = any(repo.get("path") == repo_name for repo in config["repos"])
+            if not repo_exists:
+                config["repos"].append({
+                    "path": repo_name,
+                    "tags": [visibility_tag, source_tag],
+                    "remotes": {
+                        "origin": {
+                            "name": "origin",
+                            "url": repo_url
+                        }
+                    }
+                })
+            else:
+                # Update existing repo's tags
+                for repo in config["repos"]:
+                    if repo.get("path") == repo_name:
+                        if "tags" not in repo:
+                            repo["tags"] = []
+                        if visibility_tag not in repo["tags"]:
+                            repo["tags"].append(visibility_tag)
+                        if source_tag not in repo["tags"]:
+                            repo["tags"].append(source_tag)
+                        # Update remote URL if needed
+                        if "remotes" not in repo:
+                            repo["remotes"] = {}
+                        if "origin" not in repo["remotes"]:
+                            repo["remotes"]["origin"] = {}
+                        repo["remotes"]["origin"]["name"] = "origin"
+                        repo["remotes"]["origin"]["url"] = repo_url
+                        break
+
+        # Save config once at the end
+        if save_gitopolis_config(config_path, config):
+            logger.info(f"Successfully added {len(repositories)} repositories to gitopolis config")
+            return True
+        else:
+            logger.error(f"Failed to save gitopolis config")
+            raise RuntimeError(f"Failed to save gitopolis config")
+
+    except Exception as e:
+        logger.error(f"Error adding repositories to gitopolis config: {e}")
+        raise RuntimeError(f"Failed to add repositories to gitopolis config: {e}")
+
+
 def add_repository_to_gitopolis_config(
     repo_name: str,
     repo_url: str,
@@ -62,7 +136,8 @@ def add_repository_to_gitopolis_config(
     logger: logging.Logger,
 ) -> bool:
     """
-    Add a repository to gitopolis configuration with visibility and source tags.
+    Add a single repository to gitopolis configuration (legacy function for compatibility).
+    For better performance, use add_repositories_to_gitopolis_config for multiple repos.
 
     Args:
         repo_name: Name of the repository
@@ -75,56 +150,12 @@ def add_repository_to_gitopolis_config(
     Returns:
         True if successful, False otherwise
     """
-    try:
-        logger.info(f"Adding {repo_name} to gitopolis config with tags '{visibility_tag}' and '{source_tag}'...")
-
-        # Load existing config
-        config = load_gitopolis_config(config_path)
-
-        # Add repository if not exists (repos is a list of dicts)
-        repo_exists = any(repo.get("path") == repo_name for repo in config["repos"])
-        if not repo_exists:
-            config["repos"].append({
-                "path": repo_name,
-                "tags": [visibility_tag, source_tag],
-                "remotes": {
-                    "origin": {
-                        "name": "origin",
-                        "url": repo_url
-                    }
-                }
-            })
-        else:
-            # Update existing repo's tags
-            for repo in config["repos"]:
-                if repo.get("path") == repo_name:
-                    if "tags" not in repo:
-                        repo["tags"] = []
-                    if visibility_tag not in repo["tags"]:
-                        repo["tags"].append(visibility_tag)
-                    if source_tag not in repo["tags"]:
-                        repo["tags"].append(source_tag)
-                    # Update remote URL if needed
-                    if "remotes" not in repo:
-                        repo["remotes"] = {}
-                    if "origin" not in repo["remotes"]:
-                        repo["remotes"]["origin"] = {}
-                    repo["remotes"]["origin"]["name"] = "origin"
-                    repo["remotes"]["origin"]["url"] = repo_url
-                    break
-
-        # No global tags needed - gitopolis only uses per-repo tags
-
-        # Save config
-        if save_gitopolis_config(config_path, config):
-            logger.info(f"Successfully added {repo_name} to gitopolis config")
-            return True
-        else:
-            logger.error(f"Failed to save gitopolis config for {repo_name}")
-            raise RuntimeError(f"Failed to save gitopolis config for {repo_name}")
-
-    except Exception as e:
-        logger.error(f"Error adding {repo_name} to gitopolis config: {e}")
-        raise RuntimeError(f"Failed to add {repo_name} to gitopolis config: {e}")
+    repositories = [{
+        "name": repo_name,
+        "url": repo_url,
+        "visibility_tag": visibility_tag,
+        "source_tag": source_tag
+    }]
+    return add_repositories_to_gitopolis_config(repositories, config_path, logger)
 
 

@@ -16,7 +16,7 @@ from typing import Dict, List, Optional
 
 # Import shared gitopolis utilities
 sys.path.append(str(Path(__file__).parent.parent))
-from gitopolis_utils import add_repository_to_gitopolis_config
+from gitopolis_utils import add_repositories_to_gitopolis_config
 
 
 class AzureDevOpsCloner:
@@ -127,15 +127,15 @@ class AzureDevOpsCloner:
             self.logger.error(f"Failed to fetch repositories: {e}")
             return []
 
-    def add_to_gitopolis(self, repo: Dict) -> bool:
+    def prepare_repo_for_gitopolis(self, repo: Dict) -> Dict:
         """
-        Add repository to gitopolis configuration and tag it appropriately.
+        Prepare repository data for gitopolis configuration.
 
         Args:
             repo: Repository dictionary from Azure DevOps API
 
         Returns:
-            True if successful, False otherwise
+            Dictionary with repo info for batch processing
         """
         repo_name = repo["name"]
         repo_url = repo.get("remoteUrl") or repo.get("webUrl")
@@ -143,14 +143,12 @@ class AzureDevOpsCloner:
         # Azure DevOps repos are always private
         visibility_tag = "private"
 
-        return add_repository_to_gitopolis_config(
-            repo_name=repo_name,
-            repo_url=repo_url,
-            config_path=self.config_path,
-            visibility_tag=visibility_tag,
-            source_tag="azuredevops",
-            logger=self.logger,
-        )
+        return {
+            "name": repo_name,
+            "url": repo_url,
+            "visibility_tag": visibility_tag,
+            "source_tag": "azuredevops"
+        }
 
     def process_repositories(self, organization: str, project: Optional[str] = None):
         """Main method to process all repositories."""
@@ -165,18 +163,20 @@ class AzureDevOpsCloner:
             self.logger.warning("No repositories found")
             return
 
-        gitopolis_count = 0
-
+        # Prepare all repositories for batch processing
+        self.logger.info("Preparing repositories for gitopolis configuration...")
+        repo_configs = []
         for repo in repositories:
             self.logger.info(f"Processing {repo['name']}...")
+            repo_config = self.prepare_repo_for_gitopolis(repo)
+            repo_configs.append(repo_config)
 
-            # Add to gitopolis config (will raise on error)
-            self.add_to_gitopolis(repo)
-            gitopolis_count += 1
+        # Add all repositories to gitopolis config in one operation
+        add_repositories_to_gitopolis_config(repo_configs, self.config_path, self.logger)
 
         self.logger.info(f"Processing complete!")
         self.logger.info(
-            f"Successfully added to gitopolis: {gitopolis_count}/{len(repositories)} repositories"
+            f"Successfully added to gitopolis: {len(repositories)} repositories"
         )
         self.logger.info(
             f"Use 'gitopolis clone' to clone all repositories, or 'gitopolis clone --tag <tag>' for specific subsets."
