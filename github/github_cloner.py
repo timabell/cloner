@@ -85,6 +85,86 @@ class GitHubCloner:
             self.logger.error(f"stdout: {result.stdout}")
             raise
 
+    def get_all_repositories_via_api(self, owner: Optional[str] = None) -> List[Dict]:
+        """
+        Get all repositories using GitHub API with automatic pagination.
+
+        Args:
+            owner: Optional owner (user or organization) name to limit repositories to
+
+        Returns:
+            List of repository dictionaries
+        """
+        try:
+            # Determine API endpoint
+            if owner:
+                # Use search API for organizations we don't have admin access to
+                api_path = f"/search/repositories"
+                search_query = f"org:{owner}"
+            else:
+                api_path = "/user/repos"
+
+            self.logger.info(f"Fetching all repositories via GitHub API...")
+
+            # Use gh api with --paginate to get ALL repositories automatically
+            if owner:
+                # Search API for organization repositories
+                cmd = [
+                    "gh",
+                    "api",
+                    f"/search/repositories?q=org:{owner}&per_page=100",
+                    "--paginate",
+                    "--jq",
+                    ".items[]",
+                ]
+            else:
+                # User repos API
+                cmd = [
+                    "gh",
+                    "api",
+                    "/user/repos?per_page=100&sort=updated",
+                    "--paginate",
+                    "--jq",
+                    ".[]",
+                ]
+
+            self.logger.info(f"Running command: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+            if not result.stdout.strip():
+                return []
+
+            # Parse each line as JSON (jq outputs one repo per line)
+            repos = []
+            for line in result.stdout.strip().split("\n"):
+                if line.strip():
+                    try:
+                        repo = json.loads(line)
+                        # Convert to format expected by our code
+                        formatted_repo = {
+                            "name": repo["name"],
+                            "nameWithOwner": repo["full_name"],
+                            "isPrivate": repo["private"],
+                            "sshUrl": repo["ssh_url"],
+                            "visibility": repo.get(
+                                "visibility", "private" if repo["private"] else "public"
+                            ).upper(),
+                        }
+                        repos.append(formatted_repo)
+                    except json.JSONDecodeError:
+                        continue
+
+            self.logger.info(f"Found {len(repos)} total repositories")
+            return repos
+
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"Failed to fetch repositories via API: {e}")
+            self.logger.error(f"stderr: {e.stderr}")
+            return []
+        except Exception as e:
+            self.logger.error(f"Error fetching repositories: {e}")
+            return []
+
     def get_repositories(self, owner: Optional[str] = None) -> List[Dict]:
         """
         Get all repositories (public and private) for the authenticated user or specified owner.
@@ -102,42 +182,8 @@ class GitHubCloner:
 
         all_repos = []
 
-        # Build base command args
-        base_args = [
-            "repo",
-            "list",
-            "--json",
-            "name,nameWithOwner,isPrivate,sshUrl,description,primaryLanguage,visibility",
-            "--limit",
-            "1000",
-        ]
-
-        # Add owner if specified
-        if owner:
-            base_args.append(owner)
-
-        # Get public repositories
-        try:
-            public_args = base_args + ["--visibility", "public"]
-            public_repos = self.run_gh_command(public_args)
-            if isinstance(public_repos, list):
-                all_repos.extend(public_repos)
-                self.logger.info(f"Found {len(public_repos)} public repositories")
-        except Exception as e:
-            self.logger.error(f"Failed to fetch public repositories: {e}")
-
-        # Get private repositories
-        try:
-            private_args = base_args + ["--visibility", "private"]
-            private_repos = self.run_gh_command(private_args)
-            if isinstance(private_repos, list):
-                all_repos.extend(private_repos)
-                self.logger.info(f"Found {len(private_repos)} private repositories")
-        except Exception as e:
-            self.logger.error(f"Failed to fetch private repositories: {e}")
-
-        self.logger.info(f"Total repositories found: {len(all_repos)}")
-        return all_repos
+        # Get all repositories using GitHub API with proper pagination
+        return self.get_all_repositories_via_api(owner)
 
     def prepare_repo_for_gitopolis(self, repo: Dict) -> Dict:
         """
@@ -165,7 +211,7 @@ class GitHubCloner:
             "name": repo_name,
             "url": repo_url,
             "visibility_tag": visibility_tag,
-            "source_tag": "github"
+            "source_tag": "github",
         }
 
     def process_repositories(self, owner: Optional[str] = None):
@@ -190,7 +236,9 @@ class GitHubCloner:
             repo_configs.append(repo_config)
 
         # Add all repositories to gitopolis config in one operation
-        add_repositories_to_gitopolis_config(repo_configs, self.config_path, self.logger)
+        add_repositories_to_gitopolis_config(
+            repo_configs, self.config_path, self.logger
+        )
 
         self.logger.info(f"Processing complete!")
         self.logger.info(
