@@ -147,7 +147,7 @@ class AzureDevOpsCloner:
             "name": repo_name,
             "url": repo_url,
             "visibility_tag": visibility_tag,
-            "source_tag": "azuredevops"
+            "source_tag": "azuredevops",
         }
 
     def process_repositories(self, organization: str, project: Optional[str] = None):
@@ -172,7 +172,9 @@ class AzureDevOpsCloner:
             repo_configs.append(repo_config)
 
         # Add all repositories to gitopolis config in one operation
-        add_repositories_to_gitopolis_config(repo_configs, self.config_path, self.logger)
+        add_repositories_to_gitopolis_config(
+            repo_configs, self.config_path, self.logger
+        )
 
         self.logger.info(f"Processing complete!")
         self.logger.info(
