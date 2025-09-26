@@ -37,3 +37,7 @@ To format code and run linting across all variants:
 ```bash
 ./lint.sh
 ```
+
+## License
+
+[A-GPL v3](LICENSE)
