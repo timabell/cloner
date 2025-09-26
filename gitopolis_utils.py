@@ -79,15 +79,14 @@ def add_repositories_to_gitopolis_config(
         for repo_info in repositories:
             repo_name = repo_info["name"]
             repo_url = repo_info["url"]
-            visibility_tag = repo_info["visibility_tag"]
-            source_tag = repo_info["source_tag"]
+            repo_tags = repo_info.get("tags", [])
 
             # Add repository if not exists (repos is a list of dicts)
             repo_exists = any(repo.get("path") == repo_name for repo in config["repos"])
             if not repo_exists:
                 config["repos"].append({
                     "path": repo_name,
-                    "tags": [visibility_tag, source_tag],
+                    "tags": repo_tags,
                     "remotes": {
                         "origin": {
                             "name": "origin",
@@ -101,10 +100,10 @@ def add_repositories_to_gitopolis_config(
                     if repo.get("path") == repo_name:
                         if "tags" not in repo:
                             repo["tags"] = []
-                        if visibility_tag not in repo["tags"]:
-                            repo["tags"].append(visibility_tag)
-                        if source_tag not in repo["tags"]:
-                            repo["tags"].append(source_tag)
+                        # Add any new tags that don't exist
+                        for tag in repo_tags:
+                            if tag not in repo["tags"]:
+                                repo["tags"].append(tag)
                         # Update remote URL if needed
                         if "remotes" not in repo:
                             repo["remotes"] = {}

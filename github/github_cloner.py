@@ -149,6 +149,7 @@ class GitHubCloner:
                             "visibility": repo.get(
                                 "visibility", "private" if repo["private"] else "public"
                             ).upper(),
+                            "isFork": repo.get("fork", False),
                         }
                         repos.append(formatted_repo)
                     except json.JSONDecodeError:
@@ -185,12 +186,15 @@ class GitHubCloner:
         # Get all repositories using GitHub API with proper pagination
         return self.get_all_repositories_via_api(owner)
 
-    def prepare_repo_for_gitopolis(self, repo: Dict) -> Dict:
+    def prepare_repo_for_gitopolis(
+        self, repo: Dict, owner: Optional[str] = None
+    ) -> Dict:
         """
         Prepare repository data for gitopolis configuration.
 
         Args:
             repo: Repository dictionary from GitHub API
+            owner: Optional owner to use as additional tag
 
         Returns:
             Dictionary with repo info for batch processing
@@ -207,11 +211,21 @@ class GitHubCloner:
         else:
             visibility_tag = "public"
 
+        # Build tags list
+        tags = [visibility_tag, "github"]
+
+        # Add owner tag if specified
+        if owner:
+            tags.append(owner.lower())
+
+        # Add fork tag if it's a fork
+        if repo.get("isFork", False):
+            tags.append("fork")
+
         return {
             "name": repo_name,
             "url": repo_url,
-            "visibility_tag": visibility_tag,
-            "source_tag": "github",
+            "tags": tags,
         }
 
     def process_repositories(self, owner: Optional[str] = None):
@@ -232,7 +246,7 @@ class GitHubCloner:
         repo_configs = []
         for repo in repositories:
             self.logger.info(f"Processing {repo['nameWithOwner']}...")
-            repo_config = self.prepare_repo_for_gitopolis(repo)
+            repo_config = self.prepare_repo_for_gitopolis(repo, owner)
             repo_configs.append(repo_config)
 
         # Add all repositories to gitopolis config in one operation

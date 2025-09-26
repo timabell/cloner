@@ -146,8 +146,7 @@ class AzureDevOpsCloner:
         return {
             "name": repo_name,
             "url": repo_url,
-            "visibility_tag": visibility_tag,
-            "source_tag": "azuredevops",
+            "tags": [visibility_tag, "azuredevops"],
         }
 
     def process_repositories(self, organization: str, project: Optional[str] = None):
