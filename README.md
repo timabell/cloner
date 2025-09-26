@@ -26,10 +26,20 @@ This project provides scripts to clone repositories from various source control 
 
 ## Usage
 
-See the README in each subdirectory for specific usage instructions:
+Run the cloner script for the system you want to clone repositories from:
 
 - [GitHub Cloner](github/README.md)
 - [Azure DevOps Cloner](azure-devops/README.md)
+
+This will add repositories and tags to the `.gitopolis.toml`. It will create the folder & config file if they don't exist, and if they do it will extend the config with any additional tags and repositories.
+
+Then run `gitopolis clone` to clone all repositories.
+
+Or run `gitopolis clone --tag <tag>` to clone all repositories with the specified tag.
+
+This will clone any repositories you don't already have cloned.
+
+Once you've done this, you can pass the `.gitopolis.toml` around amongst your colleagues to collaborate on building tagged list of repositories.
 
 ## Development
 
