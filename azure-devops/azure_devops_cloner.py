@@ -173,10 +173,18 @@ class AzureDevOpsCloner:
         else:
             repo_url = https_url
 
+        # Extract and sanitize project name for tagging
+        tags = ["azure-devops"]
+        project_name = repo.get("project", {}).get("name")
+        if project_name:
+            # Replace spaces with hyphens and convert to lowercase
+            sanitized_project = project_name.replace(" ", "-")
+            tags.append(sanitized_project)
+
         return {
             "name": repo_name,
             "url": repo_url,
-            "tags": ["azure-devops"],
+            "tags": tags,
         }
 
     def process_repositories(self, organization: str, project: Optional[str] = None):
