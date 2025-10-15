@@ -1,3 +1,3 @@
 #!/bin/bash -v
 asdf install python
-pip install black isort pylint toml
+pip install black isort pylint tomlkit

@@ -6,7 +6,7 @@ and adding repositories with appropriate tags.
 """
 
 import logging
-import toml
+import tomlkit
 from pathlib import Path
 from typing import Dict, List
 
@@ -23,15 +23,16 @@ def load_gitopolis_config(config_path: Path) -> Dict:
     """
     if config_path.exists():
         try:
-            return toml.load(config_path)
+            with open(config_path, 'r') as f:
+                return tomlkit.load(f)
         except Exception as e:
             # If file is corrupted, die rather than lose data
             raise RuntimeError(f"Corrupted gitopolis config at {config_path}: {e}")
     
     # Return default structure matching gitopolis format
-    return {
-        "repos": []
-    }
+    doc = tomlkit.document()
+    doc["repos"] = []
+    return doc
 
 
 def save_gitopolis_config(config_path: Path, config: Dict) -> bool:
@@ -47,7 +48,7 @@ def save_gitopolis_config(config_path: Path, config: Dict) -> bool:
     """
     try:
         with open(config_path, 'w') as f:
-            toml.dump(config, f)
+            tomlkit.dump(config, f)
         return True
     except Exception:
         return False
@@ -82,9 +83,15 @@ def _create_new_repo_entry(repo_name: str, repo_url: str, repo_tags: List[str]) 
     Returns:
         Dictionary representing a new repository entry
     """
+    # Use tomlkit array for proper formatting (spaces and trailing comma)
+    tags_array = tomlkit.array()
+    tags_array.multiline(True)
+    for tag in repo_tags:
+        tags_array.append(tag)
+    
     return {
         "path": repo_name,
-        "tags": repo_tags,
+        "tags": tags_array,
         "remotes": {
             "origin": {
                 "name": "origin",
@@ -103,7 +110,10 @@ def _merge_tags(existing_repo: Dict, new_tags: List[str]) -> None:
         new_tags: List of new tags to add
     """
     if "tags" not in existing_repo:
-        existing_repo["tags"] = []
+        # Create a new tomlkit array with proper formatting
+        tags_array = tomlkit.array()
+        tags_array.multiline(True)
+        existing_repo["tags"] = tags_array
     
     for tag in new_tags:
         if tag not in existing_repo["tags"]:
