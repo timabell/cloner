@@ -22,12 +22,13 @@ from gitopolis_utils import add_repositories_to_gitopolis_config
 class GitHubCloner:
     """Main class for discovering GitHub repositories and adding them to gitopolis configuration."""
 
-    def __init__(self, target: str):
+    def __init__(self, target: str, protocol: str = "ssh"):
         """
         Initialize the GitHub Cloner.
 
         Args:
             target: Path to .gitopolis.toml file or directory containing it
+            protocol: Remote protocol to use ('ssh' or 'https'), defaults to 'ssh'
         """
         target_path = Path(target)
 
@@ -43,6 +44,7 @@ class GitHubCloner:
 
         # Create parent directory if it doesn't exist
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        self.protocol = protocol.lower()
 
     def setup_logging(self):
         """Set up logging configuration."""
@@ -146,6 +148,7 @@ class GitHubCloner:
                             "nameWithOwner": repo["full_name"],
                             "isPrivate": repo["private"],
                             "sshUrl": repo["ssh_url"],
+                            "httpsUrl": repo["clone_url"],
                             "visibility": repo.get(
                                 "visibility", "private" if repo["private"] else "public"
                             ).upper(),
@@ -200,7 +203,7 @@ class GitHubCloner:
             Dictionary with repo info for batch processing
         """
         repo_name = repo["name"]
-        repo_url = repo["sshUrl"]
+        repo_url = repo["httpsUrl"] if self.protocol == "https" else repo["sshUrl"]
 
         # GitHub visibility: use the visibility field directly
         visibility = repo.get("visibility", "").upper()
@@ -280,10 +283,16 @@ def main():
         "--owner",
         help="GitHub owner (user or organization) name (optional, if not specified will discover from authenticated user)",
     )
+    parser.add_argument(
+        "--protocol",
+        choices=["ssh", "https"],
+        default="ssh",
+        help="Remote protocol to use (default: ssh)",
+    )
     args = parser.parse_args()
 
     try:
-        cloner = GitHubCloner(target=args.target)
+        cloner = GitHubCloner(target=args.target, protocol=args.protocol)
         cloner.process_repositories(args.owner)
 
     except KeyboardInterrupt:

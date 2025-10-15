@@ -53,6 +53,14 @@ python azure_devops_cloner.py --organization myorg --project myproject --target 
 python azure_devops_cloner.py --organization myorg --project myproject --target ~/my-repos/.gitopolis.toml
 ```
 
+### Choosing Remote Protocol
+
+By default, HTTPS URLs are used. To use SSH instead:
+
+```bash
+python azure_devops_cloner.py --organization myorg --target ~/my-repos/ --protocol ssh
+```
+
 ## Command Line Options
 
 | Option | Description | Required |
@@ -60,6 +68,7 @@ python azure_devops_cloner.py --organization myorg --project myproject --target 
 | `--organization` | Azure DevOps organization name | Yes |
 | `--target`, `-t` | Path to .gitopolis.toml file or directory containing it | Yes |
 | `--project` | Azure DevOps project name | No (defaults to all projects) |
+| `--protocol` | Remote protocol to use: `ssh` or `https` | No (defaults to `https`) |
 | `--help` | Show help message | - |
 
 ## Troubleshooting

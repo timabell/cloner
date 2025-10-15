@@ -52,12 +52,21 @@ To discover repositories from a specific user or organization:
 ./github_cloner.py --target ~/my-repos/.gitopolis.toml --owner mycompany
 ```
 
+### Choosing Remote Protocol
+
+By default, SSH URLs are used. To use HTTPS instead:
+
+```bash
+./github_cloner.py --target ~/my-repos/ --protocol https
+```
+
 ## Command Line Options
 
 | Option | Description | Required |
 |--------|-------------|----------|
 | `--target`, `-t` | Path to .gitopolis.toml file or directory containing it | Yes |
 | `--owner` | GitHub owner (user or organization) name | No (defaults to authenticated user) |
+| `--protocol` | Remote protocol to use: `ssh` or `https` | No (defaults to `ssh`) |
 
 ## Troubleshooting
 

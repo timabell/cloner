@@ -22,12 +22,13 @@ from gitopolis_utils import add_repositories_to_gitopolis_config
 class AzureDevOpsCloner:
     """Main class for discovering Azure DevOps repositories and adding them to gitopolis configuration."""
 
-    def __init__(self, target: str):
+    def __init__(self, target: str, protocol: str = "https"):
         """
         Initialize the Azure DevOps Cloner.
 
         Args:
             target: Path to .gitopolis.toml file or directory containing it
+            protocol: Remote protocol to use ('ssh' or 'https'), defaults to 'https'
         """
         target_path = Path(target)
 
@@ -43,6 +44,7 @@ class AzureDevOpsCloner:
 
         # Create parent directory if it doesn't exist
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        self.protocol = protocol.lower()
 
     def setup_logging(self):
         """Set up logging configuration."""
@@ -138,7 +140,16 @@ class AzureDevOpsCloner:
             Dictionary with repo info for batch processing
         """
         repo_name = repo["name"]
-        repo_url = repo.get("remoteUrl") or repo.get("webUrl")
+
+        # Azure DevOps provides both HTTPS and SSH URLs
+        https_url = repo.get("remoteUrl") or repo.get("webUrl")
+        ssh_url = repo.get("sshUrl")
+
+        # Use the appropriate URL based on protocol preference
+        if self.protocol == "ssh" and ssh_url:
+            repo_url = ssh_url
+        else:
+            repo_url = https_url
 
         # Azure DevOps repos are always private
         visibility_tag = "private"
@@ -206,11 +217,17 @@ def main():
         "--project",
         help="Azure DevOps project name (optional, if not specified will discover from all projects)",
     )
+    parser.add_argument(
+        "--protocol",
+        choices=["ssh", "https"],
+        default="https",
+        help="Remote protocol to use (default: https)",
+    )
 
     args = parser.parse_args()
 
     try:
-        cloner = AzureDevOpsCloner(target=args.target)
+        cloner = AzureDevOpsCloner(target=args.target, protocol=args.protocol)
         cloner.process_repositories(args.organization, args.project)
 
     except KeyboardInterrupt:
