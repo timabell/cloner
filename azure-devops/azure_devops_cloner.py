@@ -22,13 +22,14 @@ from gitopolis_utils import add_repositories_to_gitopolis_config
 class AzureDevOpsCloner:
     """Main class for discovering Azure DevOps repositories and adding them to gitopolis configuration."""
 
-    def __init__(self, target: str, protocol: str = "https"):
+    def __init__(self, target: str, protocol: str = "https", remote_name: str = "devops"):
         """
         Initialize the Azure DevOps Cloner.
 
         Args:
             target: Path to .gitopolis.toml file or directory containing it
             protocol: Remote protocol to use ('ssh' or 'https'), defaults to 'https'
+            remote_name: Name for the remote when adding to existing repos, defaults to 'devops'
         """
         target_path = Path(target)
 
@@ -45,6 +46,7 @@ class AzureDevOpsCloner:
         # Create parent directory if it doesn't exist
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.protocol = protocol.lower()
+        self.remote_name = remote_name
 
     def setup_logging(self):
         """Set up logging configuration."""
@@ -183,7 +185,7 @@ class AzureDevOpsCloner:
 
         # Add all repositories to gitopolis config in one operation
         add_repositories_to_gitopolis_config(
-            repo_configs, self.config_path, self.logger
+            repo_configs, self.config_path, self.logger, self.remote_name
         )
 
         self.logger.info(f"Processing complete!")
@@ -223,11 +225,20 @@ def main():
         default="https",
         help="Remote protocol to use (default: https)",
     )
+    parser.add_argument(
+        "--remote-name",
+        default="devops",
+        help="Name for the remote when adding to existing repos (default: devops)",
+    )
 
     args = parser.parse_args()
 
     try:
-        cloner = AzureDevOpsCloner(target=args.target, protocol=args.protocol)
+        cloner = AzureDevOpsCloner(
+            target=args.target,
+            protocol=args.protocol,
+            remote_name=args.remote_name
+        )
         cloner.process_repositories(args.organization, args.project)
 
     except KeyboardInterrupt:

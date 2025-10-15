@@ -61,6 +61,20 @@ By default, HTTPS URLs are used. To use SSH instead:
 python azure_devops_cloner.py --organization myorg --target ~/my-repos/ --protocol ssh
 ```
 
+### Adding to Existing Repositories
+
+If a repository with the same name already exists in your config, the script will:
+- Check if the URL already exists in any remote - if so, skip it
+- If the URL is different, add it as a new remote with the specified name
+
+By default, new remotes are named `devops`. You can customize this:
+
+```bash
+python azure_devops_cloner.py --organization myorg --target ~/my-repos/ --remote-name azdo
+```
+
+This is useful when you have the same repository in multiple locations (e.g., GitHub and Azure DevOps mirrors).
+
 ## Command Line Options
 
 | Option | Description | Required |
@@ -69,6 +83,7 @@ python azure_devops_cloner.py --organization myorg --target ~/my-repos/ --protoc
 | `--target`, `-t` | Path to .gitopolis.toml file or directory containing it | Yes |
 | `--project` | Azure DevOps project name | No (defaults to all projects) |
 | `--protocol` | Remote protocol to use: `ssh` or `https` | No (defaults to `https`) |
+| `--remote-name` | Name for the remote when adding to existing repos | No (defaults to `devops`) |
 | `--help` | Show help message | - |
 
 ## Troubleshooting

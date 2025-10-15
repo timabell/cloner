@@ -57,6 +57,7 @@ def add_repositories_to_gitopolis_config(
     repositories: List[Dict],
     config_path: Path,
     logger: logging.Logger,
+    remote_name: str = "origin",
 ) -> bool:
     """
     Add multiple repositories to gitopolis configuration in one operation.
@@ -65,6 +66,7 @@ def add_repositories_to_gitopolis_config(
         repositories: List of repository dicts with keys: name, url, visibility_tag, source_tag
         config_path: Path to .gitopolis.toml file
         logger: Logger instance for output
+        remote_name: Name for the remote when adding to existing repos (default: "origin")
 
     Returns:
         True if successful, False otherwise
@@ -81,9 +83,15 @@ def add_repositories_to_gitopolis_config(
             repo_url = repo_info["url"]
             repo_tags = repo_info.get("tags", [])
 
-            # Add repository if not exists (repos is a list of dicts)
-            repo_exists = any(repo.get("path") == repo_name for repo in config["repos"])
-            if not repo_exists:
+            # Check if repository already exists
+            existing_repo = None
+            for repo in config["repos"]:
+                if repo.get("path") == repo_name:
+                    existing_repo = repo
+                    break
+
+            if not existing_repo:
+                # Add new repository
                 config["repos"].append({
                     "path": repo_name,
                     "tags": repo_tags,
@@ -94,24 +102,42 @@ def add_repositories_to_gitopolis_config(
                         }
                     }
                 })
+                logger.info(f"Added new repository: {repo_name}")
             else:
-                # Update existing repo's tags
-                for repo in config["repos"]:
-                    if repo.get("path") == repo_name:
-                        if "tags" not in repo:
-                            repo["tags"] = []
-                        # Add any new tags that don't exist
-                        for tag in repo_tags:
-                            if tag not in repo["tags"]:
-                                repo["tags"].append(tag)
-                        # Update remote URL if needed
-                        if "remotes" not in repo:
-                            repo["remotes"] = {}
-                        if "origin" not in repo["remotes"]:
-                            repo["remotes"]["origin"] = {}
-                        repo["remotes"]["origin"]["name"] = "origin"
-                        repo["remotes"]["origin"]["url"] = repo_url
-                        break
+                # Repository exists - update tags and handle remotes
+                if "tags" not in existing_repo:
+                    existing_repo["tags"] = []
+                # Add any new tags that don't exist
+                for tag in repo_tags:
+                    if tag not in existing_repo["tags"]:
+                        existing_repo["tags"].append(tag)
+
+                # Handle remotes
+                if "remotes" not in existing_repo:
+                    existing_repo["remotes"] = {}
+
+                # Check if URL already exists in any remote
+                url_exists = any(
+                    remote.get("url") == repo_url
+                    for remote in existing_repo["remotes"].values()
+                )
+
+                if url_exists:
+                    logger.info(f"Repository {repo_name} already has URL {repo_url}, skipping")
+                else:
+                    # URL is different - add as new remote
+                    # Find a unique remote name
+                    final_remote_name = remote_name
+                    counter = 1
+                    while final_remote_name in existing_repo["remotes"]:
+                        final_remote_name = f"{remote_name}{counter}"
+                        counter += 1
+
+                    existing_repo["remotes"][final_remote_name] = {
+                        "name": final_remote_name,
+                        "url": repo_url
+                    }
+                    logger.info(f"Added remote '{final_remote_name}' to existing repository: {repo_name}")
 
         # Save config once at the end
         if save_gitopolis_config(config_path, config):
