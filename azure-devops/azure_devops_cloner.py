@@ -96,6 +96,7 @@ class AzureDevOpsCloner:
     ) -> List[Dict]:
         """
         Get all repositories from Azure DevOps for the specified organization/project.
+        Uses az devops invoke to get all repos without pagination limits.
 
         Args:
             organization: Azure DevOps organization name
@@ -107,26 +108,43 @@ class AzureDevOpsCloner:
         self.logger.info(f"Fetching repositories from organization '{organization}'...")
 
         try:
+            org_url = f"https://dev.azure.com/{organization}"
+
+            # Use az devops invoke to get all repos (no 100 limit like az repos list)
             cmd_args = [
-                "repos",
-                "list",
-                "--organization",
-                f"https://dev.azure.com/{organization}",
+                "devops",
+                "invoke",
+                "--area",
+                "git",
+                "--resource",
+                "repositories",
+                "--org",
+                org_url,
+                "--api-version",
+                "7.0",
                 "--output",
                 "json",
             ]
 
-            if project:
-                cmd_args.extend(["--project", project])
-                self.logger.info(f"Limiting to project '{project}'")
+            result = self.run_az_command(cmd_args)
 
-            repos = self.run_az_command(cmd_args)
+            # Azure DevOps API returns {"value": [...], "count": N}
+            if isinstance(result, dict) and "value" in result:
+                all_repos = result["value"]
 
-            if isinstance(repos, list):
-                self.logger.info(f"Found {len(repos)} repositories")
-                return repos
+                # Filter by project if specified
+                if project:
+                    self.logger.info(f"Filtering to project '{project}'")
+                    all_repos = [
+                        repo
+                        for repo in all_repos
+                        if repo.get("project", {}).get("name") == project
+                    ]
+
+                self.logger.info(f"Found {len(all_repos)} repositories")
+                return all_repos
             else:
-                self.logger.warning("Unexpected response format from az repos list")
+                self.logger.warning("Unexpected response format from az devops invoke")
                 return []
 
         except Exception as e:
