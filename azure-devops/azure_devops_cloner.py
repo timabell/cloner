@@ -22,7 +22,9 @@ from gitopolis_utils import add_repositories_to_gitopolis_config
 class AzureDevOpsCloner:
     """Main class for discovering Azure DevOps repositories and adding them to gitopolis configuration."""
 
-    def __init__(self, target: str, protocol: str = "https", remote_name: str = "devops"):
+    def __init__(
+        self, target: str, protocol: str = "https", remote_name: str = "devops"
+    ):
         """
         Initialize the Azure DevOps Cloner.
 
@@ -235,9 +237,7 @@ def main():
 
     try:
         cloner = AzureDevOpsCloner(
-            target=args.target,
-            protocol=args.protocol,
-            remote_name=args.remote_name
+            target=args.target, protocol=args.protocol, remote_name=args.remote_name
         )
         cloner.process_repositories(args.organization, args.project)
 

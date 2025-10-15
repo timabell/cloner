@@ -300,9 +300,7 @@ def main():
 
     try:
         cloner = GitHubCloner(
-            target=args.target,
-            protocol=args.protocol,
-            remote_name=args.remote_name
+            target=args.target, protocol=args.protocol, remote_name=args.remote_name
         )
         cloner.process_repositories(args.owner)
 
