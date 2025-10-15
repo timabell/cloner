@@ -155,13 +155,10 @@ class AzureDevOpsCloner:
         else:
             repo_url = https_url
 
-        # Azure DevOps repos are always private
-        visibility_tag = "private"
-
         return {
             "name": repo_name,
             "url": repo_url,
-            "tags": [visibility_tag, "azure-devops"],
+            "tags": ["azure-devops"],
         }
 
     def process_repositories(self, organization: str, project: Optional[str] = None):

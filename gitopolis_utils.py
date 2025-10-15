@@ -292,9 +292,9 @@ def add_repository_to_gitopolis_config(
     repo_name: str,
     repo_url: str,
     config_path: Path,
-    visibility_tag: str,
-    source_tag: str,
+    tags: List[str],
     logger: logging.Logger,
+    remote_name: str = "origin",
 ) -> bool:
     """
     Add a single repository to gitopolis configuration (legacy function for compatibility).
@@ -304,9 +304,9 @@ def add_repository_to_gitopolis_config(
         repo_name: Name of the repository
         repo_url: Git URL for the repository
         config_path: Path to .gitopolis.toml file
-        visibility_tag: Tag for repository visibility ("public", "private", etc.)
-        source_tag: Tag for source platform ("github", "azuredevops", etc.)
+        tags: List of tags for the repository
         logger: Logger instance for output
+        remote_name: Name for the remote when adding to existing repos (default: "origin")
 
     Returns:
         True if successful, False otherwise
@@ -314,9 +314,8 @@ def add_repository_to_gitopolis_config(
     repositories = [{
         "name": repo_name,
         "url": repo_url,
-        "visibility_tag": visibility_tag,
-        "source_tag": source_tag
+        "tags": tags
     }]
-    return add_repositories_to_gitopolis_config(repositories, config_path, logger)
+    return add_repositories_to_gitopolis_config(repositories, config_path, logger, remote_name)
 
 
