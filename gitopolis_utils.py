@@ -83,9 +83,8 @@ def _create_new_repo_entry(repo_name: str, repo_url: str, repo_tags: List[str]) 
     Returns:
         Dictionary representing a new repository entry
     """
-    # Use tomlkit array for proper formatting (spaces and trailing comma)
+    # Use tomlkit array for inline formatting (one-liner)
     tags_array = tomlkit.array()
-    tags_array.multiline(True)
     for tag in repo_tags:
         tags_array.append(tag)
     
@@ -110,9 +109,8 @@ def _merge_tags(existing_repo: Dict, new_tags: List[str]) -> None:
         new_tags: List of new tags to add
     """
     if "tags" not in existing_repo:
-        # Create a new tomlkit array with proper formatting
+        # Create a new tomlkit array with inline formatting (one-liner)
         tags_array = tomlkit.array()
-        tags_array.multiline(True)
         existing_repo["tags"] = tags_array
     
     for tag in new_tags:
